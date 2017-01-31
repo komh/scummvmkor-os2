@@ -230,6 +230,26 @@ bool Debugger::parseCommand(const char *inputOrig) {
 					}
 					}
 					break;
+				// Bit Array
+				case DVAR_BITARRAY: {
+					char *chr = (char *)strchr(param[0], '[');
+					if (!chr) {
+						DebugPrintf("You must access this array as %s[element]\n", param[0]);
+					} else {
+						int element = atoi(chr+1);
+						byte *var = *(byte **)_dvars[i].variable;
+						if (element >= _dvars[i].optional) {
+							DebugPrintf("%s is out of range (array is %d elements big)\n", param[0], _dvars[i].optional);
+						} else {
+							if (atoi(param[1]))
+								var[element >> 3] |= (1 << (element & 7));
+							else
+								var[element >> 3] &= ~(1 << (element & 7));
+							DebugPrintf("(bit)%s = %d\n", param[0], (var[element >> 3] & (1 << (element & 7))) ? 1 : 0);
+						}
+					}
+					}
+					break;
 				default:
 					DebugPrintf("Failed to set variable %s to %s - unknown type\n", _dvars[i].name.c_str(), param[1]);
 					break;
@@ -256,6 +276,22 @@ bool Debugger::parseCommand(const char *inputOrig) {
 							DebugPrintf("%s is out of range (array is %d elements big)\n", param[0], _dvars[i].optional);
 						} else {
 							DebugPrintf("(int)%s = %d\n", param[0], var[element]);
+						}
+					}
+				}
+				break;
+				// Bit Array
+				case DVAR_BITARRAY: {
+					const char *chr = strchr(param[0], '[');
+					if (!chr) {
+						DebugPrintf("You must access this array as %s[element]\n", param[0]);
+					} else {
+						int element = atoi(chr+1);
+						const byte *var = *(const byte **)_dvars[i].variable;
+						if (element >= _dvars[i].optional) {
+							DebugPrintf("%s is out of range (array is %d elements big)\n", param[0], _dvars[i].optional);
+						} else {
+							DebugPrintf("(bit)%s = %d\n", param[0], (var[element >> 3] & (1 << (element & 7))) ? 1 : 0);
 						}
 					}
 				}

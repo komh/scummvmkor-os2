@@ -489,7 +489,7 @@
 	</dialog>
 	
 	<dialog name = 'GameOptions_Game' overlays = 'Dialog.GameOptions.TabWidget' shading = 'dim'>
-		<layout type = 'vertical' padding = '16, 16, 16, 16'>
+		<layout type = 'vertical' padding = '16, 16, 16, 16' spacing = '8'>
 			<layout type = 'horizontal' padding = '0, 0, 0, 0' spacing = '10' center = 'true'>
 				<widget name = 'Id'
 						type = 'OptionsLabel'
@@ -522,6 +522,9 @@
 						type = 'PopUp'
 				/>
 			</layout>
+			<widget name = 'v1modeCheckbox'
+					type = 'CheckBox'
+			/>
 		</layout>
 	</dialog>
 	

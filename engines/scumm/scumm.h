@@ -1216,6 +1216,8 @@ protected:
 	virtual bool handleNextCharsetCode(Actor *a, int *c);
 	virtual void CHARSET_1();
 	void drawString(int a, const byte *msg);
+	void drawStringOriginal(int a, const byte *msg);
+	void drawKorean(const byte *buffer, uint16 kr_xpos, uint16 kr_ypos, uint8 kr_color, int option) ;
 	void debugMessage(const byte *msg);
 	void showMessageDialog(const byte *msg);
 
@@ -1233,13 +1235,24 @@ public:
 
 	// Somewhat hackish stuff for 2 byte support (Chinese/Japanese/Korean)
 	bool _useCJKMode;
+	bool _useMultiFont;
+	int _numLoadedFont;
+	int _currentFont;
 	int _2byteHeight;
 	int _2byteWidth;
+	int _2byteShadow;
 	byte _newLineCharacter;
+	void loadCJKFonts();
 	byte *get2byteCharPtr(int idx);
 
-protected:
+	byte *_2byteMultiFontPtr[20];
 	byte *_2byteFontPtr;
+
+	int _2byteMultiHeight[20];
+	int _2byteMultiWidth[20];
+	int _2byteMultiShadow[20];
+
+protected:
 
 public:
 

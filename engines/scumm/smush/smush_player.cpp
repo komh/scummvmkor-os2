@@ -53,6 +53,8 @@
 #include "sound/vorbis.h"
 #include "sound/mp3.h"
 
+#include "scumm/korean.h"
+
 #include "common/zlib.h"
 
 namespace Scumm {
@@ -614,6 +616,9 @@ void SmushPlayer::handleTextResource(uint32 subType, int32 subSize, Common::Seek
 		str = string2;
 	}
 
+    char kr_color = (color != -1) ? color : 1;
+    const char *strKorean = str;
+
 	// flags:
 	// bit 0 - center       1
 	// bit 1 - not used     2
@@ -621,10 +626,14 @@ void SmushPlayer::handleTextResource(uint32 subType, int32 subSize, Common::Seek
 	// bit 3 - wrap around  8
 	switch (flags & 9) {
 	case 0:
-		sf->drawString(str, _dst, _width, _height, pos_x, pos_y, false);
+        //if(_koreanMode) addKSmush(convertToKorean((char *)str, 0), (pos_x > 0 ? pos_x : 5), pos_y - 2, kr_color);
+        if (_koreanMode) strKorean = convertToKorean(str, 0);
+        sf->drawString(strKorean, _dst, _width, _height, pos_x, pos_y, false);
 		break;
 	case 1:
-		sf->drawString(str, _dst, _width, _height, pos_x, MAX(pos_y, top), true);
+        //if(_koreanMode) addKSmush(convertToKorean((char *)str, 0), pos_x/*-(width/2)+left*/, MAX(pos_y, top) - 2, kr_color);
+        if (_koreanMode) strKorean = convertToKorean(str, 0);
+        sf->drawString(strKorean, _dst, _width, _height, pos_x, MAX(pos_y, top), true);
 		break;
 	case 8:
 		// FIXME: Is 'right' the maximum line width here, just
@@ -632,7 +641,9 @@ void SmushPlayer::handleTextResource(uint32 subType, int32 subSize, Common::Seek
 		// in The Dig's intro, where 'left' and 'right' are
 		// always 0 and 321 respectively, and apparently we
 		// handle that correctly.
-		sf->drawStringWrap(str, _dst, _width, _height, pos_x, MAX(pos_y, top), left, right, false);
+        //if(_koreanMode) addKSmush(convertToKorean((char *)str, 0), pos_x, MAX(pos_y, top) - 2, kr_color);
+        if (_koreanMode) strKorean = convertToKorean(str, 0);
+        sf->drawStringWrap(strKorean, _dst, _width, _height, pos_x, MAX(pos_y, top), left, right, false);
 		break;
 	case 9:
 		// In this case, the 'right' parameter is actually the
@@ -641,7 +652,13 @@ void SmushPlayer::handleTextResource(uint32 subType, int32 subSize, Common::Seek
 		//
 		// Note that in The Dig's "Spacetime Six" movie it's
 		// 621. I have no idea what that means.
-		sf->drawStringWrap(str, _dst, _width, _height, pos_x, MAX(pos_y, top), left, MIN(left + right, _width), true);
+        /*if(_koreanMode)
+            if(_highRes)
+                addKSmush(convertToKorean((char *)str, 0), MAX((_width / 2) - (pos_x / 2) - 305, 5), MAX(pos_y, top) - 2, kr_color);
+            else
+                addKSmush(convertToKorean((char *)str, 0), MAX((_width / 2) - (pos_x / 2) - 15, 5), MAX(pos_y, top) - 2, kr_color);*/
+        if (_koreanMode) strKorean = convertToKorean(str, 0);
+        sf->drawStringWrap(strKorean, _dst, _width, _height, pos_x, MAX(pos_y, top), left, MIN(left + right, _width), true);
 		break;
 	default:
 		error("SmushPlayer::handleTextResource. Not handled flags: %d", flags);

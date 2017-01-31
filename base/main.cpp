@@ -358,6 +358,9 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 	// Now as the event manager is created, setup the keymapper
 	setupKeymapper(system);
 
+	//KOR: 한글 폰트를 로드한다.
+	Graphics::loadKoreanGUIFont();
+
 	// Unless a game was specified, show the launcher dialog
 	if (0 == ConfMan.getActiveDomain())
 		launcherDialog();
@@ -416,6 +419,9 @@ extern "C" int scummvm_main(int argc, const char * const argv[]) {
 	Common::ConfigManager::destroy();
 	Common::SearchManager::destroy();
 	GUI::GuiManager::destroy();
+
+	//KOR: 한글 폰트를 언로드한다.
+	Graphics::unloadKoreanGUIFont();
 
 	return 0;
 }

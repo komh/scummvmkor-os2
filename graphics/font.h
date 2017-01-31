@@ -27,6 +27,7 @@
 
 #include "common/str.h"
 #include "graphics/surface.h"
+#include "graphics/korfont.h"
 
 namespace Common {
 class SeekableReadStream;
@@ -55,8 +56,8 @@ public:
 	virtual int getFontHeight() const = 0;
 	virtual int getMaxCharWidth() const = 0;
 
-	virtual int getCharWidth(byte chr) const = 0;
-	virtual void drawChar(Surface *dst, byte chr, int x, int y, uint32 color) const = 0;
+	virtual int getCharWidth(uint16 chr) const = 0;
+	virtual void drawChar(Surface *dst, uint16 chr, int x, int y, uint32 color) const = 0;
 
 	void drawString(Surface *dst, const Common::String &str, int x, int y, int w, uint32 color, TextAlign align = kTextAlignLeft, int deltax = 0, bool useEllipsis = true) const;
 
@@ -87,8 +88,8 @@ public:
 	virtual int getFontHeight() const { return 8; }
 	virtual int getMaxCharWidth() const { return 8; }
 
-	virtual int getCharWidth(byte chr) const;
-	virtual void drawChar(Surface *dst, byte chr, int x, int y, uint32 color) const;
+	virtual int getCharWidth(uint16 chr) const;
+	virtual void drawChar(Surface *dst, uint16 chr, int x, int y, uint32 color) const;
 };
 
 typedef uint16 bitmap_t; /* bitmap image unit size*/
@@ -132,8 +133,8 @@ public:
 	virtual int getFontHeight() const { return desc.height; }
 	virtual int getMaxCharWidth() const { return desc.maxwidth; }
 
-	virtual int getCharWidth(byte chr) const;
-	virtual void drawChar(Surface *dst, byte chr, int x, int y, uint32 color) const;
+	virtual int getCharWidth(uint16 chr) const;
+	virtual void drawChar(Surface *dst, uint16 chr, int x, int y, uint32 color) const;
 
 	static NewFont *loadFont(Common::SeekableReadStream &stream);
 	static bool cacheFontData(const NewFont &font, const Common::String &filename);

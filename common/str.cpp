@@ -552,14 +552,14 @@ String operator +(const String &x, char y) {
 }
 
 char *ltrim(char *t) {
-	while (isspace(*t))
+	while (isspace(*t) && !(*t & 0x80))
 		t++;
 	return t;
 }
 
 char *rtrim(char *t) {
 	int l = strlen(t) - 1;
-	while (l >= 0 && isspace(t[l]))
+	while (l >= 0 && isspace(t[l]) && !(t[l] & 0x80))
 		t[l--] = 0;
 	return t;
 }

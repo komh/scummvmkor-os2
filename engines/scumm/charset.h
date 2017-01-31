@@ -36,6 +36,19 @@ class ScummEngine;
 class NutRenderer;
 struct VirtScreen;
 
+static inline bool checkKSCode(byte hi, byte lo) {
+	//hi : xx
+	//lo : yy
+	if ((0xA1 > lo) || (0xFE < lo)) {
+		return false;
+	}
+	if ((hi >= 0xB0) && (hi <= 0xC8)) {
+		return true;
+	}
+	return false;
+}
+
+
 static inline bool checkSJISCode(byte c) {
 	if ((c > 0x84 && c < 0x88) || (c > 0x9f && c < 0xe0) || (c > 0xea /* && c <= 0xff */))
 		return false;
@@ -88,7 +101,7 @@ public:
 	virtual int getCharWidth(byte chr) = 0;
 
 	virtual void setColor(byte color) { _color = color; translateColor(); }
-
+	virtual byte getColor() { return _color; } // KOR
 	void saveLoadWithSerializer(Serializer *ser);
 };
 

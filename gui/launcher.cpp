@@ -135,6 +135,9 @@ protected:
 	StaticTextWidget *_extraPathWidget;
 	StaticTextWidget *_savePathWidget;
 
+	CheckboxWidget *_koreanModeCheckbox;
+//	CheckboxWidget *_noengModeCheckbox;
+
 	StaticTextWidget *_langPopUpDesc;
 	PopUpWidget *_langPopUp;
 	StaticTextWidget *_platformPopUpDesc;
@@ -195,6 +198,11 @@ EditGameDialog::EditGameDialog(const String &domain, const String &desc)
 	for (; p->code; ++p) {
 		_platformPopUp->appendEntry(p->description, p->id);
 	}
+
+	// Display 'Korean mode' checkbox
+	//FIXME: 언어가 한글일 때만 사용가능...
+	//_koreanModeCheckbox = addCheckbox(tab, x, yoffset, "Use V1 Korean Mode", 'K', 0, ws);
+	_koreanModeCheckbox = new CheckboxWidget(tab, "GameOptions_Game.v1modeCheckbox", "Use V1 Korean Mode", 0, 0);
 
 	//
 	// 3) The graphics tab
@@ -331,6 +339,11 @@ void EditGameDialog::open() {
 			sel = i + 2;
 	}
 	_platformPopUp->setSelected(sel);
+	
+	//여기도..
+	if(ConfMan.hasKey("v1_korean_mode", _domain)) {
+		_koreanModeCheckbox->setState(ConfMan.getBool("v1_korean_mode", _domain));
+}
 }
 
 
@@ -361,6 +374,9 @@ void EditGameDialog::close() {
 			ConfMan.removeKey("platform", _domain);
 		else
 			ConfMan.set("platform", Common::getPlatformCode(platform), _domain);
+
+		ConfMan.setBool("v1_korean_mode", _koreanModeCheckbox->getState(), _domain);
+		ConfMan.setBool("v1_korean_only", _koreanModeCheckbox->getState(), _domain);
 	}
 	OptionsDialog::close();
 }

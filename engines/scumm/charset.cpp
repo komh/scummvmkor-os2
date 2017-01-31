@@ -30,6 +30,8 @@
 #include "scumm/he/intern_he.h"
 #include "scumm/he/wiz_he.h"
 
+#include "scumm/ks_check.h"
+
 namespace Scumm {
 
 /*
@@ -48,9 +50,72 @@ better separation of the various modules.
 void ScummEngine::loadCJKFont() {
 	Common::File fp;
 	_useCJKMode = false;
+	_useMultiFont = 0;  // Korean Multi-Font
 	_textSurfaceMultiplier = 1;
 	_newLineCharacter = 0;
 
+    // Special case for Korean
+    if (_language == Common::KO_KOR) {
+        int numChar = 2350;
+
+        _useCJKMode = true;
+
+        if (_game.version < 7 || _game.id == GID_FT)
+            _useMultiFont = 1;
+
+        if (_useMultiFont) {
+            warning("Loading Korean Multi Font System");
+            _numLoadedFont = 0;
+            _2byteFontPtr = NULL;
+            _2byteWidth = 0;
+            _2byteHeight = 0;
+            Common::File::addDefaultDirectory(Common::FSNode("font").getChild(_game.gameid));
+            for(int i = 0; i < 20; i++) {
+                char fontFile[256];
+                sprintf(fontFile, "korean%02d.fnt", i);
+                _2byteMultiFontPtr[i] = NULL;
+                if (fp.open(fontFile)) {
+                    _numLoadedFont++;
+                    fp.readByte();
+                    _2byteMultiShadow[i] = fp.readByte();
+                    _2byteMultiWidth[i] = fp.readByte();
+                    _2byteMultiHeight[i] = fp.readByte();
+
+                    int fontSize = ((_2byteMultiWidth[i] + 7) / 8) * _2byteMultiHeight[i] * numChar;
+                    _2byteMultiFontPtr[i] = new byte[fontSize];
+                    warning("#%d, size %d, height =%d", i, fontSize, _2byteMultiHeight[i]);
+                    fp.read(_2byteMultiFontPtr[i], fontSize);
+                    fp.close();
+                    if (_2byteFontPtr == NULL) {    // for non-initialized Smushplayer drawChar
+                        _2byteFontPtr = _2byteMultiFontPtr[i];
+                        _2byteWidth = _2byteMultiWidth[i];
+                        _2byteHeight = _2byteMultiHeight[i];
+                        _2byteShadow = _2byteMultiShadow[i];
+                    }
+                }
+            }
+            if(_numLoadedFont == 0) {
+                warning("Cannot load any font for multi font");
+                _useMultiFont = 0;
+            } else
+                warning("%d fonts are loaded", _numLoadedFont);
+        }
+
+        if (!_useMultiFont) {
+            warning("Loading Korean Single Font System");
+            if (fp.open("korean.fnt")) {
+                fp.seek(2, SEEK_CUR);
+                _2byteWidth = fp.readByte();
+                _2byteHeight = fp.readByte();
+                _2byteFontPtr = new byte[((_2byteWidth + 7) / 8) * _2byteHeight * numChar];
+                fp.read(_2byteFontPtr, ((_2byteWidth + 7) / 8) * _2byteHeight * numChar);
+                fp.close();
+            } else {
+                error("Couldn't load any font");
+            }
+        }
+    }
+    else
 	if (_game.version <= 5 && _game.platform == Common::kPlatformFMTowns && _language == Common::JA_JPN) { // FM-TOWNS v3 / v5 Kanji
 		int numChar = 256 * 32;
 		_2byteWidth = 16;
@@ -314,6 +379,42 @@ void CharsetRendererCommon::setCurID(int32 id) {
 	_bitDepth = _fontPtr[0];
 	_fontHeight = _fontPtr[1];
 	_numChars = READ_LE_UINT16(_fontPtr + 2);
+
+//  warning("Current ID: %d", id);
+//  printf("Current ID: %d, height= %d\n", id, _fontHeight);
+
+    if(_vm->_useMultiFont) {
+        if(id == 6) { //모든 게임에 적용?
+            // Inventory: 한글이 넘쳐서 에러가 나기 때문에 0번 font를 사용.
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[0];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[0];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[0];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[0];
+        } else if(_vm->_2byteMultiFontPtr[id]) {
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[id];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[id];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[id];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[id];
+        } else {
+            // Get nearest font set (by height)
+            warning("Cannot find matching font set for charset #%d, use nearest font set", id);
+            debug(7, "Cannot find matching font set for charset #%d, use nearest font set", id);
+            int dstHeight = _fontHeight;
+            int nearest = 0;
+            for(int i = 0; i < _vm->_numLoadedFont; i++) {
+                if(ABS(_vm->_2byteMultiHeight[i] - dstHeight) <= ABS(_vm->_2byteMultiHeight[nearest] - dstHeight)) {
+                    nearest = i;
+}
+            }
+//          if(dstHeight == _vm->_2byteMultiHeight[nearest]) {
+                debug(7, "Found #%d", nearest);
+                warning("Found #%d, dst %d width %d height %d", nearest, dstHeight, _vm->_2byteMultiWidth[nearest], _vm->_2byteMultiHeight[nearest]);
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[nearest];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[nearest];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[nearest];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[nearest];
+        }
+    }
 }
 
 void CharsetRendererV3::setCurID(int32 id) {
@@ -335,6 +436,40 @@ void CharsetRendererV3::setCurID(int32 id) {
 	_fontPtr += 6;
 	_widthTable = _fontPtr;
 	_fontPtr += _numChars;
+
+//  warning("Current ID: %d", id);
+
+    if(_vm->_useMultiFont) {
+        if(id == 6) { //모든 게임에 적용?
+            // Inventory: 한글이 넘쳐서 에러가 나기 때문에 0번 font를 사용.
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[0];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[0];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[0];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[0];
+        } else if(_vm->_2byteMultiFontPtr[id]) {
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[id];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[id];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[id];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[id];
+        } else {
+            // Get nearest font set (by height)
+            debug(7, "Cannot find matching font set for charset #%d, use nearest font set", id);
+            int dstHeight = _fontHeight;
+            int nearest = 0;
+            for(int i = 0; i < _vm->_numLoadedFont; i++) {
+                if(ABS(_vm->_2byteMultiHeight[i] - dstHeight) <= ABS(_vm->_2byteMultiHeight[nearest] - dstHeight)) {
+                    nearest = i;
+}
+            }
+//          if(dstHeight == _vm->_2byteMultiHeight[nearest]) {
+                debug(7, "Found #%d", nearest);
+//              warning("Found #%d, dst %d width %d height %d", nearest, dstHeight, _vm->_2byteMultiWidth[nearest], _vm->_2byteMultiHeight[nearest]);
+            _vm->_2byteFontPtr = _vm->_2byteMultiFontPtr[nearest];
+            _vm->_2byteWidth = _vm->_2byteMultiWidth[nearest];
+            _vm->_2byteHeight = _vm->_2byteMultiHeight[nearest];
+            _vm->_2byteShadow = _vm->_2byteMultiShadow[nearest];
+        }
+    }
 }
 
 int CharsetRendererCommon::getFontHeight() {
@@ -434,6 +569,11 @@ int CharsetRenderer::getStringWidth(int arg, const byte *text) {
 
 void CharsetRenderer::addLinebreaks(int a, byte *str, int pos, int maxwidth) {
 	int lastspace = -1;
+
+    int lastKoreanLineBreak = -1;
+    char tmpStrBuf[512];
+    int origPos = pos;
+
 	int curw = 1;
 	byte chr;
 	int oldID = getCurID();
@@ -496,22 +636,44 @@ void CharsetRenderer::addLinebreaks(int a, byte *str, int pos, int maxwidth) {
 
 		if (chr == _vm->_newLineCharacter)
 			lastspace = pos - 1;
+        if (_vm->_useCJKMode && _vm->_language == Common::KO_KOR) {
+            if (_center == false && chr == '(' && pos - 3 >= origPos && checkKSCode(str[pos -3], str[pos -2]))
+                lastKoreanLineBreak = pos - 1;
+        }
 
 		if ((chr & 0x80) && _vm->_useCJKMode) {
 			pos++;
 			curw += _vm->_2byteWidth;
+            if (_vm->_language == Common::KO_KOR && checkKSCode(chr, str[pos])) {
+                if (_center == false
+                    && !(pos - 4 >= origPos && str[pos - 3] == '`' && str[pos - 4] == ' ')  // prevents hanging quotation mark at the end of line
+                    && !(pos - 4 >= origPos && str[pos - 3] == '\'' && str[pos - 4] == ' ') // prevents hanging single quotation mark at the end of line
+                    && !(pos -3 >= origPos && str[pos -3] == '('))  // prevents hanging parenthesis at the end of line
+                    lastKoreanLineBreak = pos -2;
+            }
 		} else {
 			curw += getCharWidth(chr);
 		}
-		if (lastspace == -1)
+        if (lastspace == -1 && lastKoreanLineBreak == -1)
 			continue;
 		if (curw > maxwidth) {
+            if (lastspace >= lastKoreanLineBreak) {
 			str[lastspace] = 0xD;
 			curw = 1;
 			pos = lastspace + 1;
 			lastspace = -1;
+                lastKoreanLineBreak = -1;
+            } else {
+                strcpy(tmpStrBuf, (char*)(str + lastKoreanLineBreak));
+                strcpy((char*)(str + lastKoreanLineBreak + 1), tmpStrBuf);
+                str[lastKoreanLineBreak] = 0xD;
+                curw = 1;
+                pos = lastKoreanLineBreak + 1;
+                lastspace = -1;
+                lastKoreanLineBreak = -1;
 		}
 	}
+    }
 
 	setCurID(oldID);
 }
@@ -572,7 +734,7 @@ void CharsetRendererV3::printChar(int chr, bool ignoreCharsetMask) {
 	VirtScreen *vs;
 	const byte *charPtr;
 	byte *dst;
-	int is2byte = (chr >= 0x80 && _vm->_useCJKMode) ? 1 : 0;
+    int is2byte = (chr > 0xff && _vm->_useCJKMode) ? 1 : 0;
 
 	assertRange(0, _curId, _vm->_numCharsets - 1, "charset");
 
@@ -647,7 +809,7 @@ void CharsetRendererV3::drawChar(int chr, const Graphics::Surface &s, int x, int
 	const byte *charPtr;
 	byte *dst;
 	int width, height;
-	int is2byte = (chr >= 0x80 && _vm->_useCJKMode) ? 1 : 0;
+    int is2byte = (chr > 0xff && _vm->_useCJKMode) ? 1 : 0;
 	if (is2byte) {
 		charPtr = _vm->get2byteCharPtr(chr);
 		width = _vm->_2byteWidth;
@@ -698,7 +860,7 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 	int offsX, offsY;
 	VirtScreen *vs;
 	const byte *charPtr;
-	bool is2byte = (chr >= 0x80 && _vm->_useCJKMode);
+    bool is2byte = (chr >= 0xff && _vm->_useCJKMode);
 
 	assertRange(1, _curId, _vm->_numCharsets - 1, "charset");
 
@@ -718,6 +880,12 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 		width = _vm->_2byteWidth;
 		height = _vm->_2byteHeight;
 		offsX = offsY = 0;
+        // HACK: Drop shadow를 없애기 위한 임시 해결책
+        // Charset 번호에 따라야 한다
+        if(width > 8 && height > 8)
+            enableShadow(true);
+        else
+            enableShadow(false);
 	} else {
 		uint32 charOffs = READ_LE_UINT32(_fontPtr + chr * 4 + 4);
 		assert(charOffs < 0x10000);
@@ -738,6 +906,11 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 
 		charPtr += 4;	// Skip over char header
 	}
+    if (_vm->_useCJKMode) { // KOR indy4 selection text hack: prevents underline deletion
+        if(width <= 8 || height <= 8)
+            enableShadow(false);
+    }
+
 	origWidth = width;
 	origHeight = height;
 
@@ -779,7 +952,14 @@ void CharsetRendererClassic::printChar(int chr, bool ignoreCharsetMask) {
 
 	int drawTop = _top - vs->topline;
 
-	_vm->markRectAsDirty(vs->number, _left, _left + width, drawTop, drawTop + height);
+    // shadow clipping error hack
+    // The reason  is maybe due to the korean shadow drawing?
+    int markLeft = _left, markTop = drawTop;
+    if (markLeft > 0) markLeft--;
+    if (markTop > 0) markTop--;
+    //printf("markRectAsDirty top = %d, height = %d, shadowMode%d, kMode=%d, c = %d\n", drawTop, height, _shadowMode, kNoShadowMode, chr);
+    _vm->markRectAsDirty(vs->number, markLeft, _left + width, markTop, drawTop + height);
+    //_vm->markRectAsDirty(vs->number, markLeft, _left + width, markTop, markTop + height);
 
 	if (!ignoreCharsetMask) {
 		_hasMask = true;
@@ -903,13 +1083,19 @@ void CharsetRendererClassic::drawChar(int chr, const Graphics::Surface &s, int x
 	const byte *charPtr;
 	byte *dst;
 	int width, height;
-	int is2byte = (chr >= 0x80 && _vm->_useCJKMode) ? 1 : 0;
+    int is2byte = (chr > 0xff && _vm->_useCJKMode) ? 1 : 0;
 
 	if (is2byte) {
 		enableShadow(true);
 		charPtr = _vm->get2byteCharPtr(chr);
 		width = _vm->_2byteWidth;
 		height = _vm->_2byteHeight;
+        // HACK: Drop shadow를 없애기 위한 임시 해결책
+        // Charset 번호에 따라야 한다
+        if(width > 8 && height > 8)
+            enableShadow(true);
+        else
+            enableShadow(false);
 	} else {
 		uint32 charOffs = READ_LE_UINT32(_fontPtr + chr * 4 + 4);
 		assert(charOffs < 0x10000);
@@ -964,8 +1150,51 @@ void CharsetRendererCommon::drawBits1(const Graphics::Surface &s, byte *dst, con
 	int y, x;
 	byte bits = 0;
 
-	for (y = 0; y < height && y + drawTop < s.h; y++) {
-		for (x = 0; x < width; x++) {
+    //HACK: 한글 폰트에 그림자/테두리 정보가 없기 때문에,
+    //      NUT Renderer에 있는 그림자 출력 방법을 사용한다.
+    //      그리고, 거기에 약간의 클리핑을 해 준다.
+    //      이걸로 FMT Kanji 버전에서도 OK.
+    bool useOldShadow = false;
+
+    int offsetX[14] = { -2, -2, -2, -1, 0, -1,  0,  1, -1, 1, -1, 0, 1, 0 };
+    int offsetY[14] = {  0,  1,  2,  2, 2, -1, -1, -1,  0, 0,  1, 1, 1, 0 };
+    int cTable[14] =  { _shadowColor, _shadowColor, _shadowColor,
+                        _shadowColor, _shadowColor, _shadowColor, _shadowColor,
+                        _shadowColor, _shadowColor, _shadowColor, _shadowColor,
+                        _shadowColor, _shadowColor, _color };
+    int i = 0;
+
+    // 그림자 패치. 잔상이 남는데...
+    if(_vm->_game.id == GID_DIG) {
+        _vm->_2byteShadow = 2;
+    }
+
+    switch(_vm->_2byteShadow) {
+    case 1:     // 그림자 없음
+        i = 13;
+        break;
+    case 2:     // 5시 그림자
+        i = 12;
+        break;
+    case 3:     // 테두리 및 7시 그림자 (원숭이 섬 2, 인디 4)
+        i = 0;
+        break;
+    default:    // 테두리
+        i = 5;
+    }
+
+    if (!_vm->_useCJKMode) {
+        i = 13;
+        useOldShadow = true;
+    }
+
+    const byte *origSrc = src;
+    byte *origDst = dst;
+    for (; i < 14; i++) {
+        src = origSrc;
+        dst = origDst;
+        for (y = 0; y < height && y + drawTop + offsetY[i] < s.h; y++) {
+            for (x = 0; x < width && x + offsetY[i] < s.w; x++) {
 			if ((x % 8) == 0)
 				bits = *src++;
 			if ((bits & revBitMask(x % 8)) && y + drawTop >= 0) {
@@ -975,13 +1204,14 @@ void CharsetRendererCommon::drawBits1(const Graphics::Surface &s, byte *dst, con
 					if (_shadowMode != kFMTOWNSShadowMode)
 						*(dst + s.pitch + 1) = _shadowColor;
 				}
-				*dst = _color;
+				*(dst + (s.pitch * offsetY[i]) + offsetX[i]) = cTable[i];
 			}
 			dst++;
 		}
 
 		dst += s.pitch - width;
 	}
+    }
 }
 
 #ifdef ENABLE_SCUMM_7_8
