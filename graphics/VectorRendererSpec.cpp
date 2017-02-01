@@ -145,14 +145,14 @@ inline frac_t fp_sqroot(uint32 x) {
 
 /** HELPER MACROS for WU's circle drawing algorithm **/
 #define __WU_DRAWCIRCLE(ptr1,ptr2,ptr3,ptr4,x,y,px,py,a) { \
-	blendPixelPtr(ptr1 + (y) - (px), color, a); \
-	blendPixelPtr(ptr1 + (x) - (py), color, a); \
-	blendPixelPtr(ptr2 - (x) - (py), color, a); \
-	blendPixelPtr(ptr2 - (y) - (px), color, a); \
-	blendPixelPtr(ptr3 - (y) + (px), color, a); \
-	blendPixelPtr(ptr3 - (x) + (py), color, a); \
-	blendPixelPtr(ptr4 + (x) + (py), color, a); \
-	blendPixelPtr(ptr4 + (y) + (px), color, a); \
+	this->blendPixelPtr(ptr1 + (y) - (px), color, a); \
+	this->blendPixelPtr(ptr1 + (x) - (py), color, a); \
+	this->blendPixelPtr(ptr2 - (x) - (py), color, a); \
+	this->blendPixelPtr(ptr2 - (y) - (px), color, a); \
+	this->blendPixelPtr(ptr3 - (y) + (px), color, a); \
+	this->blendPixelPtr(ptr3 - (x) + (py), color, a); \
+	this->blendPixelPtr(ptr4 + (x) + (py), color, a); \
+	this->blendPixelPtr(ptr4 + (y) + (px), color, a); \
 }
 
 // optimized Wu's algorithm
@@ -1292,7 +1292,7 @@ drawSquareShadow(int x, int y, int w, int h, int blur) {
 	while (i--) {
 		j = blur;
 		while (j--)
-			blendPixelPtr(ptr + j, 0, ((blur - j) << 8) / blur);
+			this->blendPixelPtr(ptr + j, 0, ((blur - j) << 8) / blur);
 		ptr += pitch;
 	}
 
@@ -1301,7 +1301,7 @@ drawSquareShadow(int x, int y, int w, int h, int blur) {
 	while (i++ < blur) {
 		j = w - blur;
 		while (j--)
-			blendPixelPtr(ptr + j, 0, ((blur - i) << 8) / blur);
+			this->blendPixelPtr(ptr + j, 0, ((blur - i) << 8) / blur);
 		ptr += pitch;
 	}
 
@@ -1311,7 +1311,7 @@ drawSquareShadow(int x, int y, int w, int h, int blur) {
 	while (i++ < blur) {
 		j = blur - 1;
 		while (j--)
-			blendPixelPtr(ptr + j, 0, (((blur - j) * (blur - i)) << 8) / (blur * blur));
+			this->blendPixelPtr(ptr + j, 0, (((blur - j) * (blur - i)) << 8) / (blur * blur));
 		ptr += pitch;
 	}
 }
@@ -1398,19 +1398,19 @@ drawRoundedSquareFakeBevel(int x1, int y1, int r, int w, int h, int amount) {
 		while (x > y++) {
 			__WU_ALGORITHM();
 
-			blendPixelPtr(ptr_tr + (y) - (px - pitch), color, a2);
-			blendPixelPtr(ptr_tr + (x - 1) - (py), color, a2);
-			blendPixelPtr(ptr_tl - (x - 1) - (py), color, a2);
-			blendPixelPtr(ptr_tl - (y) - (px - pitch), color, a2);
-			blendPixelPtr(ptr_bl - (y) + (px - pitch), color, a2);
-			blendPixelPtr(ptr_bl - (x - 1) + (py), color, a2);
+			this->blendPixelPtr(ptr_tr + (y) - (px - pitch), color, a2);
+			this->blendPixelPtr(ptr_tr + (x - 1) - (py), color, a2);
+			this->blendPixelPtr(ptr_tl - (x - 1) - (py), color, a2);
+			this->blendPixelPtr(ptr_tl - (y) - (px - pitch), color, a2);
+			this->blendPixelPtr(ptr_bl - (y) + (px - pitch), color, a2);
+			this->blendPixelPtr(ptr_bl - (x - 1) + (py), color, a2);
 
-			blendPixelPtr(ptr_tr + (y) - (px), color, a1);
-			blendPixelPtr(ptr_tr + (x) - (py), color, a1);
-			blendPixelPtr(ptr_tl - (x) - (py), color, a1);
-			blendPixelPtr(ptr_tl - (y) - (px), color, a1);
-			blendPixelPtr(ptr_bl - (y) + (px), color, a1);
-			blendPixelPtr(ptr_bl - (x) + (py), color, a1);
+			this->blendPixelPtr(ptr_tr + (y) - (px), color, a1);
+			this->blendPixelPtr(ptr_tr + (x) - (py), color, a1);
+			this->blendPixelPtr(ptr_tl - (x) - (py), color, a1);
+			this->blendPixelPtr(ptr_tl - (y) - (px), color, a1);
+			this->blendPixelPtr(ptr_bl - (y) + (px), color, a1);
+			this->blendPixelPtr(ptr_bl - (x) + (py), color, a1);
 		}
 	}
 
@@ -1459,8 +1459,8 @@ drawLineAlg(int x1, int y1, int x2, int y2, int dx, int dy, PixelType color) {
 			ptr += xdir;
 			alpha = (error_acc >> 8);
 
-			blendPixelPtr(ptr, color, ~alpha);
-			blendPixelPtr(ptr + pitch, color, alpha);
+			this->blendPixelPtr(ptr, color, ~alpha);
+			this->blendPixelPtr(ptr + pitch, color, alpha);
 		}
 	} else {
 		gradient = (uint32)(dx << 16) / (uint32)dy;
@@ -1476,8 +1476,8 @@ drawLineAlg(int x1, int y1, int x2, int y2, int dx, int dy, PixelType color) {
 			ptr += pitch;
 			alpha = (error_acc >> 8);
 
-			blendPixelPtr(ptr, color, ~alpha);
-			blendPixelPtr(ptr + xdir, color, alpha);
+			this->blendPixelPtr(ptr, color, ~alpha);
+			this->blendPixelPtr(ptr + xdir, color, alpha);
 		}
 	}
 

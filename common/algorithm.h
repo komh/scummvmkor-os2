@@ -146,6 +146,11 @@ Op for_each(In first, In last, Op f) {
 }
 
 /**
+ * Template method which swaps the vaulues of its two parameters.
+ */
+template<typename T> inline void SORT_SWAP(T &a, T &b) { T tmp = a; a = b; b = tmp; }
+
+/**
  * Simple sort function, modeled after std::sort.
  * Use it like this: sort(container.begin(), container.end()).
  * Also works on plain old i.e. int arrays etc. For comperance
@@ -166,7 +171,7 @@ void sort(T first, T last) {
 			if (*j < *minElem)
 				minElem = j;
 		if (minElem != i)
-			SWAP(*minElem, *i);
+			SORT_SWAP(*minElem, *i);
 	}
 }
 
@@ -192,7 +197,7 @@ void sort(T first, T last, StrictWeakOrdering comp) {
 			if (comp(*j, *minElem))
 				minElem = j;
 		if (minElem != i)
-			SWAP(*minElem, *i);
+			SORT_SWAP(*minElem, *i);
 	}
 }
 
